@@ -2,7 +2,7 @@
 
 ## 简介
 
-otm8009a 软件包提供了使用液晶显示的基本功能，并且本软件包已经对接到了 LCD 框架，通过 LCD 框架，开发者可以快速的将此液晶芯片驱动起来。
+otm8009a 软件包提供了使用液晶显示的基本功能，并且本软件包已经对接到了 LCD 接口框架，通过 LCD 接口框架，开发者可以快速的将此液晶芯片驱动起来。
 ## 支持情况
 
 | 包含设备           | 液晶芯片 |  
@@ -37,7 +37,7 @@ RT-Thread online packages  --->
 otm8009a 软件包初始化函数如下所示：
 
 ```
-int rt_hw_otm8009a_init(struct rt_lcd_config *config, const char *name)
+int rt_hw_otm8009a_init(struct rt_lcd_device *config, const char *name)
 ```
 
 该函数需要由用户调用，函数主要完成的功能有，
@@ -48,23 +48,22 @@ int rt_hw_otm8009a_init(struct rt_lcd_config *config, const char *name)
 #### 初始化示例
 
 ```.c
+#define  LCD_WIDTH     800
+#define  LCD_HEIGHT    480
+#define  BL_PIN        119  
+#define  LCD_NAME      "lcd"
+
 int rt_hw_otm8009a_port(void)
 {
-  struct rt_lcd_config config;
+    struct rt_lcd_device config;
 
-  config.gra_info.width = LCD_WIDTH;
-  config.gra_info.height = LCD_HEIGHT;
-  config.gra_info.pixel_format = RTGRAPHIC_PIXEL_FORMAT_ARGB888;
-  config.gra_info.bits_per_pixel = LCD_BITS_PER_PIXEL;
+    config.gra_info.width = LCD_WIDTH;
+    config.gra_info.height = LCD_HEIGHT;
+    config.bl_pin = BL_PIN;
 
-  config.hw_info.bl_pin = LCD_BL_PIN;
-  config.hw_info.bl_type = RT_LCD_BACKLIGHT_TYPE_CMD;
-  config.hw_info.lcd_type = RT_LCD_DISPLAY_TYPE_FRAMEBUFFER;
-  config.dev_name  = "lcd_intf";
+    rt_hw_otm8009a_init(&config, LCD_NAME);
 
-  rt_hw_otm8009a_init(&config, "lcd");
-
-  return 0;
+    return 0;
 }
 INIT_ENV_EXPORT(rt_hw_otm8009a_port);
 ```

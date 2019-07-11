@@ -11,25 +11,26 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 
-#define LCD_BUF_SIZE      (480 * 800 * 32 / 8)
-#define LCD_DEVICE_NAME   "lcd"
+#define LCD_BUF_SIZE        (480 * 800 * 32 / 8)
+#define LCD_NAME             "lcd"
+
 int otm8009a_sample(void)
 {
     struct rt_lcd_device *lcd;
-    lcd = (struct rt_lcd_device *)rt_device_find(LCD_DEVICE_NAME);
+    lcd = (struct rt_lcd_device *)rt_device_find(LCD_NAME);
     if (lcd == RT_NULL)
     {
         rt_kprintf("find a lcd device failed \n");
         return -RT_ERROR;
     }
 
-    rt_kprintf("%d %d %x\r\n", lcd->config.gra_info.width, lcd->config.gra_info.height, lcd->config.hw_info.id);
+    rt_kprintf("%d %d\r\n", lcd->gra_info.width, lcd->gra_info.height);
 
     for (int i = 0; i < LCD_BUF_SIZE / 2; i++)
     {
-        lcd->config.gra_info.framebuffer[2 * i] = 0x00;
-        lcd->config.gra_info.framebuffer[2 * i + 1] = 0xff;
-        lcd->config.gra_info.framebuffer[2 * i + 2] = 0x00;
+        lcd->gra_info.framebuffer[2 * i] = 0x00;
+        lcd->gra_info.framebuffer[2 * i + 1] = 0xff;
+        lcd->gra_info.framebuffer[2 * i + 2] = 0x00;
 
     }
     lcd->parent.control(&lcd->parent, RTGRAPHIC_CTRL_RECT_UPDATE, RT_NULL);
@@ -37,9 +38,9 @@ int otm8009a_sample(void)
 
     for (int i = 0; i < LCD_BUF_SIZE / 2; i++)
     {
-        lcd->config.gra_info.framebuffer[2 * i] = 0x00;
-        lcd->config.gra_info.framebuffer[2 * i + 1] = 0x00;
-        lcd->config.gra_info.framebuffer[2 * i + 2] = 0x00;
+        lcd->gra_info.framebuffer[2 * i] = 0x00;
+        lcd->gra_info.framebuffer[2 * i + 1] = 0x00;
+        lcd->gra_info.framebuffer[2 * i + 2] = 0x00;
 
     }
     lcd->parent.control(&lcd->parent, RTGRAPHIC_CTRL_RECT_UPDATE, RT_NULL);
@@ -47,9 +48,9 @@ int otm8009a_sample(void)
 
     for (int i = 0; i < LCD_BUF_SIZE / 2; i++)
     {
-        lcd->config.gra_info.framebuffer[2 * i] = 0xff;
-        lcd->config.gra_info.framebuffer[2 * i + 1] = 0xff;
-        lcd->config.gra_info.framebuffer[2 * i + 2] = 0xff;
+        lcd->gra_info.framebuffer[2 * i] = 0xff;
+        lcd->gra_info.framebuffer[2 * i + 1] = 0xff;
+        lcd->gra_info.framebuffer[2 * i + 2] = 0xff;
 
     }
     lcd->parent.control(&lcd->parent, RTGRAPHIC_CTRL_RECT_UPDATE, RT_NULL);
@@ -60,5 +61,5 @@ int otm8009a_sample(void)
 }
 MSH_CMD_EXPORT(otm8009a_sample, otm8009a sample);
 
-/************************* end of file **********************/
+/******************** end of file ***********************/
 

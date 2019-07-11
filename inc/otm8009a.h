@@ -15,9 +15,6 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* List of OTM8009A used commands                                  */
 /* Detailed in OTM8009A Data Sheet 'DATA_SHEET_OTM8009A_V0 92.pdf' */
@@ -76,7 +73,7 @@ extern "C" {
 #define  OTM8009A_CMD_WRCABC                0x55  /* Write Content Adaptive Brightness command */
 #define  OTM8009A_CMD_WRCABCMB              0x5E  /* Write CABC Minimum Brightness command     */
 
-int rt_hw_otm8009a_init(struct rt_lcd_config *config, const char *name);
+int rt_hw_otm8009a_init(struct rt_lcd_device *lcd, const char *name);
 
 #ifdef __cplusplus
 }

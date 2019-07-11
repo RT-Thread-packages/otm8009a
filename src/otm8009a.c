@@ -118,10 +118,10 @@ static struct rt_lcd_device lcd;
 
 static rt_err_t otm8009a_write_cmd(rt_uint8_t *p, uint32_t num)
 {
-    return rt_lcd_intf_write_cmd(lcd.intf, (void *)p, num);
+    return rt_lcd_write_cmd(lcd.intf, (void *)p, num);
 }
 
-static rt_err_t otm8009a_init_display(rt_lcd_t device)
+static rt_err_t _otm8009a_init_display(rt_device_t device)
 {
     /* Enable CMD2 to access vendor specific commands                               */
     /* Enter in command 2 mode and set EXTC to enable address shift function (0x00) */
@@ -363,7 +363,7 @@ static rt_err_t otm8009a_display_off(void)
     return otm8009a_write_cmd((rt_uint8_t *)ShortRegData52, 0);
 }
 
-static rt_err_t stm32_lcd_control(rt_lcd_t device, int cmd, void *args)
+static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
 {
     switch(cmd)
     {
@@ -379,7 +379,7 @@ static rt_err_t stm32_lcd_control(rt_lcd_t device, int cmd, void *args)
         break;
 
     case RTGRAPHIC_CTRL_GET_INFO:
-        rt_memcpy(args, &lcd.config.gra_info, sizeof(lcd.config.gra_info));
+        rt_memcpy(args, &lcd.gra_info, sizeof(lcd.gra_info));
         break;
 
     case RTGRAPHIC_CTRL_SET_MODE:
@@ -392,29 +392,46 @@ static rt_err_t stm32_lcd_control(rt_lcd_t device, int cmd, void *args)
     return RT_EOK;
 }
 
-static struct rt_lcd_device_ops otm8009a_ops =
+#ifdef RT_USING_DEVICE_OPS
+static const struct rt_device_ops lcd_device_ops =
 {
-    stm32_lcd_control,
     otm8009a_init_display,
+    RT_NULL,
+    RT_NULL,
+    RT_NULL,
+    RT_NULL,
+    _otm8009a_control,
 };
+#endif /* RT_USING_DEVICE_OPS */
 
-int rt_hw_otm8009a_init(struct rt_lcd_config *config, const char *name)
+int rt_hw_otm8009a_init(struct rt_lcd_device *lcd_dev, const char *name)
 {
     rt_err_t result;
+    struct rt_device *device;
 
     result	= RT_EOK;
+    lcd.gra_info.width          = lcd_dev->gra_info.width;
+    lcd.gra_info.height         = lcd_dev->gra_info.height;
+    lcd.gra_info.pixel_format   = RTGRAPHIC_PIXEL_FORMAT_ARGB888;
+    lcd.gra_info.bits_per_pixel = 32;
+    lcd.gra_info.framebuffer    = (rt_uint8_t *)rt_malloc(lcd.gra_info.width * lcd.gra_info.height * (lcd.gra_info.bits_per_pixel / 8));
+    if (lcd.gra_info.framebuffer == RT_NULL)
+    {
+        LOG_E("malloc memory failed\n");
+        return -RT_ERROR;
+    }
+    rt_memset(lcd.gra_info.framebuffer, 0, lcd.gra_info.height * lcd.gra_info.width * (lcd.gra_info.bits_per_pixel / 8));
 
-    /* reset first MSP Initialize only in case of first initialization This will set IP blocks LTDC, DSI and DMA2D */
-    rt_pin_mode(config->hw_info.bl_pin, PIN_MODE_OUTPUT);
-    rt_pin_write(config->hw_info.bl_pin, PIN_LOW);
+    rt_pin_mode(lcd_dev->bl_pin, PIN_MODE_OUTPUT);
+    rt_pin_write(lcd_dev->bl_pin, PIN_LOW);
     rt_thread_mdelay(20);
-    rt_pin_write(config->hw_info.bl_pin, PIN_HIGH);
+    rt_pin_write(lcd_dev->bl_pin, PIN_HIGH);
     rt_thread_mdelay(10);
 
-    lcd.intf = (rt_lcd_intf_t)rt_device_find(config->dev_name);
+    lcd.intf = (struct rt_lcd_intf *)rt_device_find("lcd_intf");
     if (lcd.intf == RT_NULL)
     {
-        LOG_E("can't find interface device\n");
+        LOG_E("can't find device\n");
         return -RT_ERROR;
     }
 
@@ -424,22 +441,25 @@ int rt_hw_otm8009a_init(struct rt_lcd_config *config, const char *name)
         return -RT_ERROR;
     }
 
-    lcd.config.gra_info.width          = config->gra_info.width;
-    lcd.config.gra_info.height         = config->gra_info.height;
-    lcd.config.gra_info.pixel_format   = config->gra_info.pixel_format;
-    lcd.config.gra_info.bits_per_pixel = config->gra_info.bits_per_pixel;
-    lcd.config.gra_info.framebuffer    = (rt_uint8_t *)rt_malloc(lcd.config.gra_info.width * lcd.config.gra_info.height * (lcd.config.gra_info.bits_per_pixel / 8));
-    if (lcd.config.gra_info.framebuffer == RT_NULL)
-    {
-        LOG_E("malloc memory failed\n");
-        return -RT_ERROR;
-    }
+    rt_lcd_config(lcd.intf, &lcd.gra_info);
 
-    rt_memset(lcd.config.gra_info.framebuffer, 0, lcd.config.gra_info.height * lcd.config.gra_info.width * (lcd.config.gra_info.bits_per_pixel / 8));
-    rt_lcd_intf_config(lcd.intf, &lcd.config);
-    lcd.ops = &otm8009a_ops;
+    device = &(lcd.parent);
 
-    result = rt_lcd_device_register(&lcd, "lcd", RT_DEVICE_FLAG_RDWR, RT_NULL);
+#ifdef RT_USING_DEVICE_OPS
+    device->ops = &lcd_device_ops;
+#else
+    device->init = _otm8009a_init_display;
+    device->open = RT_NULL;
+    device->close = RT_NULL;
+    device->read  = RT_NULL;
+    device->write = RT_NULL;
+    device->control = _otm8009a_control;
+#endif /* RT_USING_DEVICE_OPS */
+
+    device->type         = RT_Device_Class_Graphic;
+
+    result = rt_device_register(device, name, RT_DEVICE_FLAG_STANDALONE);
+
     if (result != RT_EOK)
     {
         LOG_E("register lcd device failed\n");
