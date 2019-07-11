@@ -73,7 +73,7 @@
 #define  OTM8009A_CMD_WRCABC                0x55  /* Write Content Adaptive Brightness command */
 #define  OTM8009A_CMD_WRCABCMB              0x5E  /* Write CABC Minimum Brightness command     */
 
-int rt_hw_otm8009a_init(struct rt_lcd_device *lcd, const char *name);
+int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data);
 
 #ifdef __cplusplus
 }

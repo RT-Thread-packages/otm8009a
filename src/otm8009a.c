@@ -114,11 +114,16 @@ const rt_uint8_t ShortRegData51[] = {0xC6, 0x06};
 const rt_uint8_t ShortRegData52[] = {OTM8009A_CMD_DISPOFF, 0x00};
 const rt_uint8_t ShortRegData53[] = {OTM8009A_CMD_DISPON, 0x00};
 
-static struct rt_lcd_device lcd;
+struct otm8009a_device
+{
+    struct rt_lcd_device lcd;
+    rt_base_t            rst_pin;
+};
+static struct otm8009a_device lcd_device;
 
 static rt_err_t otm8009a_write_cmd(rt_uint8_t *p, uint32_t num)
 {
-    return rt_lcd_write_cmd(lcd.intf, (void *)p, num);
+    return rt_lcd_write_cmd(lcd_device.lcd.intf, (void *)p, num);
 }
 
 static rt_err_t _otm8009a_init_display(rt_device_t device)
@@ -298,7 +303,7 @@ static rt_err_t _otm8009a_init_display(rt_device_t device)
     otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
     otm8009a_write_cmd((rt_uint8_t *)lcdRegData25, 3);
 
-    /* Standard DCS Initialization TO KEEP CAN BE DONE IN HSDT                   */
+    /* Standard DCS Initialization TO KEEP CAN BE DONE IN HSDT */
 
     /* NOP - goes back to DCS std command ? */
     otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
@@ -379,7 +384,7 @@ static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
         break;
 
     case RTGRAPHIC_CTRL_GET_INFO:
-        rt_memcpy(args, &lcd.gra_info, sizeof(lcd.gra_info));
+        rt_memcpy(args, &lcd_device.lcd.info, sizeof(lcd_device.lcd.info));
         break;
 
     case RTGRAPHIC_CTRL_SET_MODE:
@@ -404,46 +409,45 @@ static const struct rt_device_ops lcd_device_ops =
 };
 #endif /* RT_USING_DEVICE_OPS */
 
-int rt_hw_otm8009a_init(struct rt_lcd_device *lcd_dev, const char *name)
+int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
 {
     rt_err_t result;
     struct rt_device *device;
 
-    result	= RT_EOK;
-    lcd.gra_info.width          = lcd_dev->gra_info.width;
-    lcd.gra_info.height         = lcd_dev->gra_info.height;
-    lcd.gra_info.pixel_format   = RTGRAPHIC_PIXEL_FORMAT_ARGB888;
-    lcd.gra_info.bits_per_pixel = 32;
-    lcd.gra_info.framebuffer    = (rt_uint8_t *)rt_malloc(lcd.gra_info.width * lcd.gra_info.height * (lcd.gra_info.bits_per_pixel / 8));
-    if (lcd.gra_info.framebuffer == RT_NULL)
+    result = RT_EOK;
+    lcd_device.lcd.info.width          = width;
+    lcd_device.lcd.info.height         = height;
+    lcd_device.lcd.info.pixel_format   = RTGRAPHIC_PIXEL_FORMAT_ARGB888;
+    lcd_device.lcd.info.bits_per_pixel = 32;
+    lcd_device.lcd.info.framebuffer    = (rt_uint8_t *)rt_malloc(width * height * 32 / 8);
+    if (lcd_device.lcd.info.framebuffer == RT_NULL)
     {
         LOG_E("malloc memory failed\n");
         return -RT_ERROR;
     }
-    rt_memset(lcd.gra_info.framebuffer, 0, lcd.gra_info.height * lcd.gra_info.width * (lcd.gra_info.bits_per_pixel / 8));
-
-    rt_pin_mode(lcd_dev->bl_pin, PIN_MODE_OUTPUT);
-    rt_pin_write(lcd_dev->bl_pin, PIN_LOW);
+    lcd_device.rst_pin = *(rt_uint16_t *)user_data;
+    rt_pin_mode(lcd_device.rst_pin, PIN_MODE_OUTPUT);
+    rt_pin_write(lcd_device.rst_pin, PIN_LOW);
     rt_thread_mdelay(20);
-    rt_pin_write(lcd_dev->bl_pin, PIN_HIGH);
+    rt_pin_write(lcd_device.rst_pin, PIN_HIGH);
     rt_thread_mdelay(10);
 
-    lcd.intf = (struct rt_lcd_intf *)rt_device_find("lcd_intf");
-    if (lcd.intf == RT_NULL)
+    lcd_device.lcd.intf = (struct rt_lcd_intf *)rt_device_find("lcd_intf");
+    if (lcd_device.lcd.intf == RT_NULL)
     {
         LOG_E("can't find device\n");
         return -RT_ERROR;
     }
 
-    if (rt_device_open((rt_device_t)lcd.intf, RT_DEVICE_FLAG_RDWR) != RT_EOK)
+    if (rt_device_open((rt_device_t)lcd_device.lcd.intf, RT_DEVICE_FLAG_RDWR) != RT_EOK)
     {
         LOG_E("open lcd interface device failed\n");
         return -RT_ERROR;
     }
 
-    rt_lcd_config(lcd.intf, &lcd.gra_info);
+    rt_lcd_config(lcd_device.lcd.intf, &lcd_device.lcd.info);
 
-    device = &(lcd.parent);
+    device = &(lcd_device.lcd.parent);
 
 #ifdef RT_USING_DEVICE_OPS
     device->ops = &lcd_device_ops;
@@ -458,7 +462,7 @@ int rt_hw_otm8009a_init(struct rt_lcd_device *lcd_dev, const char *name)
 
     device->type         = RT_Device_Class_Graphic;
 
-    result = rt_device_register(device, name, RT_DEVICE_FLAG_STANDALONE);
+    result = rt_device_register(device, "otm8009a", RT_DEVICE_FLAG_STANDALONE);
 
     if (result != RT_EOK)
     {

@@ -36,8 +36,8 @@ RT-Thread online packages  --->
 
 otm8009a 软件包初始化函数如下所示：
 
-```
-int rt_hw_otm8009a_init(struct rt_lcd_device *config, const char *name)
+```c
+rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
 ```
 
 该函数需要由用户调用，函数主要完成的功能有，
@@ -50,18 +50,13 @@ int rt_hw_otm8009a_init(struct rt_lcd_device *config, const char *name)
 ```.c
 #define  LCD_WIDTH     800
 #define  LCD_HEIGHT    480
-#define  BL_PIN        119  
-#define  LCD_NAME      "lcd"
+#define  RST_PIN       119  
 
 int rt_hw_otm8009a_port(void)
-{
-    struct rt_lcd_device config;
-
-    config.gra_info.width = LCD_WIDTH;
-    config.gra_info.height = LCD_HEIGHT;
-    config.bl_pin = BL_PIN;
-
-    rt_hw_otm8009a_init(&config, LCD_NAME);
+{ 
+    rt_base_t rst_pin = RST_PIN;
+	
+    rt_hw_otm8009a_init(LCD_WIDTH, LCD_HEIGHT, &rst_pin);
 
     return 0;
 }
