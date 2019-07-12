@@ -8,9 +8,6 @@ cwd   = GetCurrentDir()
 if GetDepend('PKG_USING_OTM8009A'):
     src += Glob('src/otm8009a.c')
 
-if GetDepend('PKG_USING_OTM8009A_SAMPLE'):
-    src += Glob('samples/otm8009a_sample.c')
-
 # add otm8009a include path.
 path  = [cwd + '/inc']
 

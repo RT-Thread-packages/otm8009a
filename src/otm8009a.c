@@ -59,7 +59,6 @@ const rt_uint8_t lcdRegData27[] = {0x00, 0x00, 0x03, 0x1F, OTM8009A_CMD_CASET};
   * YS[15:0] = 0x000 = 0, YE[15:0] = 0x1DF = 479 for landscape mode : apply to PASET
  */
 const rt_uint8_t lcdRegData28[] = {0x00, 0x00, 0x01, 0xDF, OTM8009A_CMD_PASET};
-
 const rt_uint8_t ShortRegData1[]  = {OTM8009A_CMD_NOP, 0x00};
 const rt_uint8_t ShortRegData2[]  = {OTM8009A_CMD_NOP, 0x80};
 const rt_uint8_t ShortRegData3[]  = {0xC4, 0x30};
@@ -126,7 +125,7 @@ static rt_err_t otm8009a_write_cmd(rt_uint8_t *p, uint32_t num)
     return rt_lcd_write_cmd(lcd_device.lcd.intf, (void *)p, num);
 }
 
-static rt_err_t _otm8009a_init_display(rt_device_t device)
+static rt_err_t _otm8009a_init(rt_device_t device)
 {
     /* Enable CMD2 to access vendor specific commands                               */
     /* Enter in command 2 mode and set EXTC to enable address shift function (0x00) */
@@ -137,7 +136,6 @@ static rt_err_t _otm8009a_init_display(rt_device_t device)
     otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);  /* Shift address to 0x80 */
     otm8009a_write_cmd((rt_uint8_t *)lcdRegData2, 2);
 
-    /////////////////////////////////////////////////////////////////////
     /* SD_PCH_CTRL - 0xC480h - 129th parameter - Default 0x00          */
     /* Set SD_PT                                                       */
     /* -> Source output level during porch and non-display area to GND */
@@ -400,7 +398,7 @@ static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
 #ifdef RT_USING_DEVICE_OPS
 static const struct rt_device_ops lcd_device_ops =
 {
-    otm8009a_init_display,
+    _otm8009a_init,
     RT_NULL,
     RT_NULL,
     RT_NULL,
@@ -425,6 +423,7 @@ int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
         LOG_E("malloc memory failed\n");
         return -RT_ERROR;
     }
+
     lcd_device.rst_pin = *(rt_uint16_t *)user_data;
     rt_pin_mode(lcd_device.rst_pin, PIN_MODE_OUTPUT);
     rt_pin_write(lcd_device.rst_pin, PIN_LOW);
@@ -452,7 +451,7 @@ int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
 #ifdef RT_USING_DEVICE_OPS
     device->ops = &lcd_device_ops;
 #else
-    device->init = _otm8009a_init_display;
+    device->init = _otm8009a_init;
     device->open = RT_NULL;
     device->close = RT_NULL;
     device->read  = RT_NULL;
@@ -463,7 +462,6 @@ int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
     device->type         = RT_Device_Class_Graphic;
 
     result = rt_device_register(device, "otm8009a", RT_DEVICE_FLAG_STANDALONE);
-
     if (result != RT_EOK)
     {
         LOG_E("register lcd device failed\n");
@@ -473,6 +471,6 @@ int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
     return result;
 }
 
-#endif /* PKG_USING_OTM8009A */
+#endif   /* PKG_USING_OTM8009A */
 
 /******************** end of file ******************************/

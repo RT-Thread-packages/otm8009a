@@ -15,6 +15,9 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* List of OTM8009A used commands                                  */
 /* Detailed in OTM8009A Data Sheet 'DATA_SHEET_OTM8009A_V0 92.pdf' */
