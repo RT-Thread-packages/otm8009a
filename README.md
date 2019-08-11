@@ -37,13 +37,12 @@ RT-Thread online packages  --->
 otm8009a 软件包初始化函数如下所示：
 
 ```c
-rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
+int rt_hw_otm8009a_init(struct rt_lcd_mcu *mcu, void *user_data);
 ```
 
 该函数需要由用户调用，函数主要完成的功能有，
 
-- 设备配置和初始化（根据传入的配置信息，配置接口设备）；
-- 注册相应的 LCD 设备，完成 otm8009a 设备的注册；
+- 根据已经配置好的 LCD 接口设备来初始化 LCD 显示，并注册相应的 LCD 设备，完成 otm8009a 设备的注册；
 
 #### 初始化示例
 
@@ -54,9 +53,16 @@ rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
 
 int rt_hw_otm8009a_port(void)
 { 
-    rt_base_t rst_pin = RST_PIN;
-	
-    rt_hw_otm8009a_init(LCD_WIDTH, LCD_HEIGHT, &rst_pin);
+    struct rt_lcd_mcu *mcu;
+    rt_base_t rst_pin;
+
+    rst_pin = RST_PIN;
+    /* config lcd interface device */
+    ......
+    rt_lcd_mcu_config(mcu, &mcu->mcu_config);
+    
+    /* init and register lcd device*/
+    rt_hw_otm8009a_init(mcu, &rst_pin);
 
     return 0;
 }

@@ -5,7 +5,7 @@
  *
  * Change Logs:
  * Date           Author         Notes
- * 2019-07-01     tyustli        first version
+ * 2019-07-31     tyustli        first version
  */
 
 #include "otm8009a.h"
@@ -113,260 +113,255 @@ const rt_uint8_t ShortRegData51[] = {0xC6, 0x06};
 const rt_uint8_t ShortRegData52[] = {OTM8009A_CMD_DISPOFF, 0x00};
 const rt_uint8_t ShortRegData53[] = {OTM8009A_CMD_DISPON, 0x00};
 
-struct otm8009a_device
-{
-    struct rt_lcd_device lcd;
-    rt_base_t            rst_pin;
-};
-static struct otm8009a_device lcd_device;
+static struct rt_lcd_device lcd_device;
 
-static rt_err_t otm8009a_write_cmd(rt_uint8_t *p, uint32_t num)
+static rt_err_t otm8009a_write_cmd(rt_lcd_t device, rt_uint8_t *p, uint32_t num)
 {
-    return rt_lcd_write_cmd(lcd_device.lcd.intf, (void *)p, num);
+    return rt_lcd_write_cmd(device->mcu, (void *)p, num);
 }
 
-static rt_err_t _otm8009a_init(rt_device_t device)
+static rt_err_t _otm8009a_init(rt_lcd_t device)
 {
     /* Enable CMD2 to access vendor specific commands                               */
     /* Enter in command 2 mode and set EXTC to enable address shift function (0x00) */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData1, 3);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData1, 3);
 
     /* Enter ORISE Command 2 */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);  /* Shift address to 0x80 */
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData2, 2);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData2, 0);  /* Shift address to 0x80 */
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData2, 2);
 
     /* SD_PCH_CTRL - 0xC480h - 129th parameter - Default 0x00          */
     /* Set SD_PT                                                       */
     /* -> Source output level during porch and non-display area to GND */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData3, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData2, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData3, 0);
     rt_thread_mdelay(10);
     /* Not documented */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData4, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData5, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData4, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData5, 0);
     rt_thread_mdelay(10);
 
     /* PWR_CTRL4 - 0xC4B0h - 178th parameter - Default 0xA8 */
     /* Set gvdd_en_test                                     */
     /* -> enable GVDD test mode !!!                         */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData6, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData7, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData6, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData7, 0);
 
     /* PWR_CTRL2 - 0xC590h - 146th parameter - Default 0x79      */
     /* Set pump 4 vgh voltage                                    */
     /* -> from 15.0v down to 13.0v                               */
     /* Set pump 5 vgh voltage                                    */
     /* -> from -12.0v downto -9.0v                               */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData8, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData9, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData8, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData9, 0);
 
     /* P_DRV_M - 0xC0B4h - 181th parameter - Default 0x00 */
     /* -> Column inversion                                */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData10, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData11, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData10, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData11, 0);
 
     /* VCOMDC - 0xD900h - 1st parameter - Default 0x39h */
     /* VCOM Voltage settings                            */
     /* -> from -1.0000v downto -1.2625v                 */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData12, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData12, 0);
 
     /* Oscillator adjustment for Idle/Normal mode (LPDT only) set to 65Hz (default is 60Hz) */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData13, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData14, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData13, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData14, 0);
 
     /* Video mode internal */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData15, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData16, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData15, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData16, 0);
 
     /* PWR_CTRL2 - 0xC590h - 147h parameter - Default 0x00 */
     /* Set pump 4&5 x6                                     */
     /* -> ONLY VALID when PUMP4_EN_ASDM_HV = "0"           */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData17, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData18, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData17, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData18, 0);
 
     /* PWR_CTRL2 - 0xC590h - 150th parameter - Default 0x33h */
     /* Change pump4 clock ratio                              */
     /* -> from 1 line to 1/2 line                            */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData19, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData9, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData19, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData9, 0);
 
     /* GVDD/NGVDD settings */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData5, 2);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData5, 2);
 
     /* PWR_CTRL2 - 0xC590h - 149th parameter - Default 0x33h */
     /* Rewrite the default value !                           */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData20, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData21, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData20, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData21, 0);
 
     /* Panel display timing Setting 3 */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData22, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData23, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData22, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData23, 0);
 
     /* Power control 1 */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData24, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData25, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData24, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData25, 0);
 
     /* Source driver precharge */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData13, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData26, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData13, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData26, 0);
 
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData15, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData27, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData15, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData27, 0);
 
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData28, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData6, 2);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData28, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData6, 2);
 
     /* GOAVST */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData7, 6);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData2, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData7, 6);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData29, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData8, 14);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData29, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData8, 14);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData30, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData9, 14);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData30, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData9, 14);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData31, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData10, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData31, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData10, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData32, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData46, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData32, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData46, 0);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData11, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData2, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData11, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData33, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData12, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData33, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData12, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData29, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData13, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData29, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData13, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData30, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData14, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData30, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData14, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData31, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData15, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData31, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData15, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData32, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData16, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData32, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData16, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData34, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData17, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData34, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData17, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData35, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData18, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData35, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData18, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData2, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData19, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData2, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData19, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData33, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData20, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData33, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData20, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData29, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData21, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData29, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData21, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData30, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData22, 10);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData30, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData22, 10);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData31, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData23, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData31, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData23, 15);
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData32, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData24, 15);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData32, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData24, 15);
 
     /* PWR_CTRL1 - 0xc580h - 130th parameter - default 0x00 */
     /* Pump 1 min and max DM                                */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData13, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData47, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData48, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData49, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData13, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData47, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData48, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData49, 0);
 
     /* CABC LEDPWM frequency adjusted to 19,5kHz */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData50, 0);
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData51, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData50, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData51, 0);
 
     /* Exit CMD2 mode */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData25, 3);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData25, 3);
 
     /* Standard DCS Initialization TO KEEP CAN BE DONE IN HSDT */
 
     /* NOP - goes back to DCS std command ? */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
 
     /* Gamma correction 2.2+ table (HSDT possible) */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData3, 16);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData3, 16);
     /* Gamma correction 2.2- table (HSDT possible) */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData4, 16);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData4, 16);
     /* Send Sleep Out command to display : no parameter */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData36, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData36, 0);
 
     /* Wait for sleep out exit */
     rt_thread_mdelay(120);
 
     /* Set Pixel color format to RGB888 */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData38, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData38, 0);
 
     /* Send command to configure display in landscape orientation mode. By default
     the orientation mode is portrait  */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData39, 0);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData27, 4);
-    otm8009a_write_cmd((rt_uint8_t *)lcdRegData28, 4);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData39, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData27, 4);
+    otm8009a_write_cmd(device, (rt_uint8_t *)lcdRegData28, 4);
 
     /** CABC : Content Adaptive Backlight Control section start >> */
     /* Note : defaut is 0 (lowest Brightness), 0xFF is highest Brightness, try 0x7F : intermediate value */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData40, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData40, 0);
     /* defaut is 0, try 0x2C - Brightness Control Block, Display Dimming & BackLight on */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData41, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData41, 0);
     /* defaut is 0, try 0x02 - image Content based Adaptive Brightness [Still Picture] */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData42, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData42, 0);
     /* defaut is 0 (lowest Brightness), 0xFF is highest Brightness */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData43, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData43, 0);
 
     /** CABC : Content Adaptive Backlight Control section end << */
 
     /* Send Command Display On */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData44, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData44, 0);
     /* NOP command */
 
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData1, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData1, 0);
     /* Send Command GRAM memory write (no parameters) : this initiates frame write via other DSI commands sent by */
     /* DSI host from LTDC incoming pixels in video mode */
-    otm8009a_write_cmd((rt_uint8_t *)ShortRegData45, 0);
+    otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData45, 0);
 
     return RT_EOK;
 }
 
-static rt_err_t otm8009a_display_on(void)
+static rt_err_t otm8009a_display_on(rt_lcd_t device)
 {
-    return otm8009a_write_cmd((rt_uint8_t *)ShortRegData53, 0);
+    return otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData53, 0);
 }
 
-static rt_err_t otm8009a_display_off(void)
+static rt_err_t otm8009a_display_off(rt_lcd_t device)
 {
-    return otm8009a_write_cmd((rt_uint8_t *)ShortRegData52, 0);
+    return otm8009a_write_cmd(device, (rt_uint8_t *)ShortRegData52, 0);
 }
 
-static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
+static rt_err_t _otm8009a_control(rt_lcd_t device, int cmd, void *args)
 {
     switch(cmd)
     {
@@ -374,15 +369,15 @@ static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
         break;
 
     case RTGRAPHIC_CTRL_POWERON:
-        otm8009a_display_on();
+        otm8009a_display_on(device);
         break;
 
     case RTGRAPHIC_CTRL_POWEROFF:
-        otm8009a_display_off();
+        otm8009a_display_off(device);
         break;
 
     case RTGRAPHIC_CTRL_GET_INFO:
-        rt_memcpy(args, &lcd_device.lcd.info, sizeof(lcd_device.lcd.info));
+        rt_memcpy(args, &device->mcu->mcu_config.info, sizeof(device->mcu->mcu_config.info));
         break;
 
     case RTGRAPHIC_CTRL_SET_MODE:
@@ -395,73 +390,21 @@ static rt_err_t _otm8009a_control(rt_device_t device, int cmd, void *args)
     return RT_EOK;
 }
 
-#ifdef RT_USING_DEVICE_OPS
-static const struct rt_device_ops lcd_device_ops =
+static struct rt_lcd_ops _lcd_ops =
 {
     _otm8009a_init,
-    RT_NULL,
-    RT_NULL,
-    RT_NULL,
-    RT_NULL,
     _otm8009a_control,
 };
-#endif /* RT_USING_DEVICE_OPS */
 
-int rt_hw_otm8009a_init(rt_uint16_t width, rt_uint16_t height, void *user_data)
+int rt_hw_otm8009a_init(struct rt_lcd_mcu *mcu, void *user_data)
 {
     rt_err_t result;
-    struct rt_device *device;
 
     result = RT_EOK;
-    lcd_device.lcd.info.width          = width;
-    lcd_device.lcd.info.height         = height;
-    lcd_device.lcd.info.pixel_format   = RTGRAPHIC_PIXEL_FORMAT_ARGB888;
-    lcd_device.lcd.info.bits_per_pixel = 32;
-    lcd_device.lcd.info.framebuffer    = (rt_uint8_t *)rt_malloc(width * height * 32 / 8);
-    if (lcd_device.lcd.info.framebuffer == RT_NULL)
-    {
-        LOG_E("malloc memory failed\n");
-        return -RT_ERROR;
-    }
+    lcd_device.mcu = mcu;
+    lcd_device.config.rst_pin = *(rt_uint16_t *)user_data;
 
-    lcd_device.rst_pin = *(rt_uint16_t *)user_data;
-    rt_pin_mode(lcd_device.rst_pin, PIN_MODE_OUTPUT);
-    rt_pin_write(lcd_device.rst_pin, PIN_LOW);
-    rt_thread_mdelay(20);
-    rt_pin_write(lcd_device.rst_pin, PIN_HIGH);
-    rt_thread_mdelay(10);
-
-    lcd_device.lcd.intf = (struct rt_lcd_intf *)rt_device_find("lcd_intf");
-    if (lcd_device.lcd.intf == RT_NULL)
-    {
-        LOG_E("can't find device\n");
-        return -RT_ERROR;
-    }
-
-    if (rt_device_open((rt_device_t)lcd_device.lcd.intf, RT_DEVICE_FLAG_RDWR) != RT_EOK)
-    {
-        LOG_E("open lcd interface device failed\n");
-        return -RT_ERROR;
-    }
-
-    rt_lcd_config(lcd_device.lcd.intf, &lcd_device.lcd.info);
-
-    device = &(lcd_device.lcd.parent);
-
-#ifdef RT_USING_DEVICE_OPS
-    device->ops = &lcd_device_ops;
-#else
-    device->init = _otm8009a_init;
-    device->open = RT_NULL;
-    device->close = RT_NULL;
-    device->read  = RT_NULL;
-    device->write = RT_NULL;
-    device->control = _otm8009a_control;
-#endif /* RT_USING_DEVICE_OPS */
-
-    device->type         = RT_Device_Class_Graphic;
-
-    result = rt_device_register(device, "otm8009a", RT_DEVICE_FLAG_STANDALONE);
+    result = rt_lcd_device_register(&lcd_device, "otm8009a", &_lcd_ops, RT_NULL);
     if (result != RT_EOK)
     {
         LOG_E("register lcd device failed\n");
